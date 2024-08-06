@@ -1,0 +1,53 @@
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/gpio.h"
+
+#define RED_PIN GPIO_NUM_18
+#define YELLOW_PIN GPIO_NUM_19
+#define GREEN_PIN GPIO_NUM_21
+
+typedef enum {
+    RED,
+    YELLOW,
+    GREEN
+} traffic_light_state_t;
+
+void set_traffic_light(traffic_light_state_t state) {
+    gpio_set_level(RED_PIN, state == RED);
+    gpio_set_level(YELLOW_PIN, state == YELLOW);
+    gpio_set_level(GREEN_PIN, state == GREEN);
+}
+
+void traffic_light_task(void *pvParameter) {
+    traffic_light_state_t state = RED;
+
+    while (1) {
+        set_traffic_light(state);
+
+        switch (state) {
+            case RED:
+                vTaskDelay(5000 / portTICK_PERIOD_MS);
+                state = GREEN;
+                break;
+            case YELLOW:
+                vTaskDelay(2000 / portTICK_PERIOD_MS);
+                state = RED;
+                break;
+            case GREEN:
+                vTaskDelay(5000 / portTICK_PERIOD_MS);
+                state = YELLOW;
+                break;
+        }
+    }
+}
+
+void app_main() {
+    gpio_reset_pin(RED_PIN);
+    gpio_set_direction(RED_PIN, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(YELLOW_PIN);
+    gpio_set_direction(YELLOW_PIN, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(GREEN_PIN);
+    gpio_set_direction(GREEN_PIN, GPIO_MODE_OUTPUT);
+
+    xTaskCreate(&traffic_light_task, "traffic_light_task", 2048, NULL, 5, NULL);
+}
